@@ -1,0 +1,58 @@
+---
+title: "Exam"
+output: html_document
+date: "2024-12-18"
+---
+# packages utilisés
+```{r, message=FALSE,warning=FALSE}
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(purrr)
+library(data.table)
+```
+# Import des fichiers csv
+```{r, message=FALSE,warning=FALSE}
+library(tidyverse)
+path <- "C:\\Users\\User\\Documents\\IUT\\R\\git\\TP--R"
+files <- list.files(path = file.path(path, "exam_data"), pattern = "\\.csv$", full.names = TRUE)
+file_list <- paste0(path, files)
+extract <- function(file) {
+  data <- read.csv(file, header = TRUE, sep = ",", stringsAsFactors = FALSE)
+  return(data)
+}
+df <- map_df(files,extract)
+
+```
+# Graphique sur l'évolution des ventes
+
+```{r, message = FALSE, warning = FALSE, out.width="100%"}
+df2 <- df %>% 
+  mutate(date = as.Date(date)) %>%
+  # Sort and extract top 30 and bottom 30 values
+  mutate(
+    top_30 = nb_de_ventes %in% sort(nb_de_ventes, decreasing = TRUE)[1:30],  # Top 30 highest values
+    bottom_30 = nb_de_ventes %in% sort(nb_de_ventes, decreasing = FALSE)[1:30]  # Bottom 30 lowest values
+  ) 
+
+ggplot(df2, aes(x = date, y = nb_de_ventes)) +
+  geom_line(aes(color = "Ventes", linetype = "Ventes"), size = 0.8) +  
+  geom_smooth(method = "loess", se = FALSE, span = 0.4, aes(color = "Lissage"), size = 1.2, group = 1) +  
+  geom_hline(aes(yintercept = mean(nb_de_ventes), color = "Moyenne"), linetype = "dotted") +
+  geom_hline(aes(yintercept = median(nb_de_ventes), color = "Médiane"), linetype = "dotted") +
+  geom_point(data = subset(df2, top_30), aes(color = "top_30"), size = 2) +
+  geom_point(data = subset(df2, bottom_30), aes(color = "bottom_30"), size = 2) +
+  scale_color_manual(name = "Légende",
+                     values = c("Moyenne" = "darkblue", "Médiane" = "blue", "Lissage" = "skyblue3", "Ventes" = "gray33",  "top_30" = "darkgreen", "bottom_30" = "darkred"), 
+                     breaks = c("Moyenne", "Médiane", "Lissage", "Ventes", "top_30", "bottom_30"),
+                     labels = c("Moyenne", "Médiane", "Lissage", "Ventes", "30 meilleurs jours de ventes", "30 pire jours de ventes")) +  
+  scale_linetype_manual(name = "Légende des lignes",
+                        values = c("Ventes" = "solid", "Lissage" = "solid", "Moyenne" = "dotted", "Médiane" = "dotted"),
+                        guide = "none") +  
+  labs(
+    title = "Nombre de ventes entre 2020 et 2024",
+    x = "Date", 
+    y = "Nombre de ventes"
+  )
+  
+```
